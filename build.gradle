@@ -2,14 +2,26 @@
 
 buildscript {
     repositories {
-        jcenter()
+        //jcenter()
+        /*maven {
+            //url uri('./repo')
+            //url "http://192.168.10.230:8081/nexus/content/repositories/releases"
+        }*/
         maven {
-            url uri('./repo')
+            url deployUrl
         }
+        maven {
+            url deployReleaseUrl
+        }
+        maven {
+            url thirdpartyUrl
+        }
+        mavenCentral()
+        jcenter()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:2.2.2'
-        classpath 'com.meiyou:meetyoucostplugin:1.0.1'
+        classpath "com.meiyou:meetyoucostplugin:1.0.0-SNAPSHOT"
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
@@ -17,9 +29,21 @@ buildscript {
 
 allprojects {
     repositories {
+
+        maven {
+            url deployUrl
+        }
+        maven {
+            url deployReleaseUrl
+        }
+        maven {
+            url thirdpartyUrl
+        }
+        mavenCentral()
         jcenter()
     }
 }
+
 
 task clean(type: Delete) {
     delete rootProject.buildDir

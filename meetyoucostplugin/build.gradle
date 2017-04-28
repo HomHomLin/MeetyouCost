@@ -16,7 +16,7 @@ repositories {
 //发布到jcentr请参照：http://blog.csdn.net/sbsujjbcy/article/details/50782830
 
 
-group='com.meiyou'
+/*group='com.meiyou'
 version='1.0.1'
 
 uploadArchives {
@@ -25,4 +25,5 @@ uploadArchives {
             repository(url: uri('../repo'))
         }
     }
-}
+}*/
+apply from: rootProject.file('mvn.gradle')
