@@ -9,6 +9,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.AdviceAdapter;
+import org.objectweb.asm.signature.SignatureVisitor;
 
 /**
  * 方法耗时 visitor
@@ -25,6 +26,7 @@ public class CostMethodClassVisitor extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature,
                                      String[] exceptions) {
+
         MethodVisitor methodVisitor = cv.visitMethod(access, name, desc, signature, exceptions);
         methodVisitor = new AdviceAdapter(Opcodes.ASM5, methodVisitor, access, name, desc) {
 
@@ -52,11 +54,19 @@ public class CostMethodClassVisitor extends ClassVisitor {
             }
 
             @Override
+            public void visitFieldInsn(int opcode, String owner, String name, String desc) {
+                super.visitFieldInsn(opcode, owner, name, desc);
+            }
+
+
+
+            @Override
             protected void onMethodEnter() {
                 //super.onMethodEnter();
                 if(isInject()){
+
                     mv.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
-                    mv.visitLdcInsn("========start========="+name);
+                    mv.visitLdcInsn("========start========="+name+"==>des:"+desc);
                     mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println",
                             "(Ljava/lang/String;)V", false);
 
