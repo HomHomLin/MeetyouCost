@@ -1,5 +1,8 @@
 package com.meiyou.meetyoucost;
 
+import android.util.Log;
+import android.view.View;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,6 +31,14 @@ public class TimeCache {
     long start = sStartTime.get(methodName);
     long end = sEndTime.get(methodName);
     return "method: " + methodName + " cost " + Long.valueOf(end - start)/(1000*1000) + "  ms";
+  }
+
+
+  public static void setView(View view){
+    Log.d("test","setview is called");
+    if(view != null){
+      Log.d("test",view.toString());
+    }
   }
 
 }
