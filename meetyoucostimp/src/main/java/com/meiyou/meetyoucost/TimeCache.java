@@ -33,6 +33,19 @@ public class TimeCache {
     return "method: " + methodName + " cost " + Long.valueOf(end - start)/(1000*1000) + "  ms";
   }
 
+  public static void onMethodEnd(Object obj, String name, Object[] objects){
+    Log.d("test","onMethodEnd is called");
+  }
+
+  public static void onMethodEnter(Object obj, String name, Object[] objects){
+    Log.d("test","onMethodEnter is called");
+//    if(objects != null){
+//      for(Object object : objects){
+//        Log.d("test-array-obj",object.toString());
+//      }
+//
+//    }
+  }
 
   public static void setView(View view){
     Log.d("test","setview is called");
