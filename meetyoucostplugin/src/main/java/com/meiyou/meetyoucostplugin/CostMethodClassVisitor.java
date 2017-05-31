@@ -1,5 +1,6 @@
 package com.meiyou.meetyoucostplugin;
 
+import org.objectweb.asm.Label;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
@@ -182,11 +183,31 @@ public class CostMethodClassVisitor extends ClassVisitor {
                 loadThis();
                 mv.visitLdcInsn(name);
                 loadArgArray();
+                    Type[] types = Type.getArgumentTypes(methodDesc);
+                    int start_index = types.length + 1;
 //                mv.visitVarInsn(ALOAD, start_index);
                     mv.visitMethodInsn(INVOKESTATIC, "com/meiyou/meetyoucost/TimeCache", "onMethodEnter",
-                            "(Ljava/lang/Object;Ljava/lang/String;[Ljava/lang/Object;)V", false);
+                            "(Ljava/lang/Object;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;", false);
+                mv.visitVarInsn(ASTORE, start_index);
 
-//                }
+                //如果拦截器为真
+                mv.visitMethodInsn(INVOKESTATIC, "com/meiyou/meetyoucost/TimeCache", "onIntecept", "()Z", false);
+                Label l0 = new Label();
+                mv.visitJumpInsn(IFEQ, l0);
+                onMethodExit(-1);
+                String return_v = Type.getReturnType(desc).toString();
+                if(!return_v.equals("V")){
+                    //有返回值
+                    mv.visitVarInsn(ALOAD, start_index);
+                    returnValue();
+                }else{
+                    mv.visitInsn(RETURN);
+                }
+
+                mv.visitLabel(l0);
+                mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+
+
             }
 
             @Override
