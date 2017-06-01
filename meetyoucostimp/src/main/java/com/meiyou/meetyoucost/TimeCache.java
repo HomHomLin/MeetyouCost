@@ -14,15 +14,11 @@ import java.util.Map;
 
 public class TimeCache {
 
-  public static boolean onIntecept(){
-    return false;
-  }
-
-  public static void onMethodEnd(Object obj, String name, Object[] objects){
+  public static void onMethodEnd(Object obj, String name, Object[] objects, String rtype){
     Log.d("test","onMethodEnd is called");
   }
 
-  public static Object onMethodEnter(Object obj, String name, Object[] objects){
+  public static Object onMethodEnter(Object obj, String name, Object[] objects, String rtype){
     Log.d("test","onMethodEnter is called");
     return null;
   }

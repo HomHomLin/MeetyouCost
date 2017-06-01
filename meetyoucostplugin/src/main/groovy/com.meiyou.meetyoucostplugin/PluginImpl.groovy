@@ -14,6 +14,7 @@ import org.objectweb.asm.ClassWriter
 import static org.objectweb.asm.ClassReader.EXPAND_FRAMES
 
 public class PluginImpl extends Transform implements Plugin<Project> {
+    def props = new Properties()
     void apply(Project project) {
         /*project.task('testTask') << {
              println "Hello gradle plugin!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -22,6 +23,11 @@ public class PluginImpl extends Transform implements Plugin<Project> {
          //task耗时监听
          project.gradle.addListener(new TimeListener())
     */
+        //读写配置
+        new File("assassin.properties").withInputStream {
+            stream -> props.load(stream)
+        }
+
         //遍历class文件和jar文件，在这里可以进行class文件asm文件替换
         def android = project.extensions.getByType(AppExtension);
         android.registerTransform(this)
@@ -51,6 +57,31 @@ public class PluginImpl extends Transform implements Plugin<Project> {
     void transform(Context context, Collection<TransformInput> inputs, Collection<TransformInput> referencedInputs,
                    TransformOutputProvider outputProvider, boolean isIncremental) throws IOException, TransformException, InterruptedException {
         println '//===============asm visit start===============//'
+        //配置文件读取
+        Iterator<String> it = props.stringPropertyNames().iterator();
+        ArrayList<AssassinDO> propsItem = new ArrayList<>();
+        String option  = CostMethodClassVisitor.OPTION_DEFAULT;
+        while(it.hasNext()){
+            String key = it.next();
+            String v = props[key];
+            //打印配置
+            println key + "=" + v
+            if(key.equals(CostMethodClassVisitor.OPTION_NAME)){
+                option = v;
+                continue;
+            }
+            //将配置数据封装
+            AssassinDO assassinDO = new AssassinDO();
+            String[] itemKey = key.split("\\.");
+            assassinDO.mate = itemKey[0];
+            assassinDO.type = itemKey[1];
+            assassinDO.key = itemKey[2];
+            assassinDO.value = v;
+
+            println assassinDO.toString()
+
+            propsItem.add(assassinDO);
+        }
         //遍历inputs里的TransformInput
         inputs.each { TransformInput input ->
             //遍历input里边的DirectoryInput
@@ -68,7 +99,7 @@ public class PluginImpl extends Transform implements Plugin<Project> {
                                         !"R.class".equals(name) && !"BuildConfig.class".equals(name)) {
                                     ClassReader classReader = new ClassReader(file.bytes)
                                     ClassWriter classWriter = new ClassWriter(classReader,ClassWriter.COMPUTE_MAXS)
-                                    ClassVisitor cv = new CostMethodClassVisitor(classWriter)
+                                    ClassVisitor cv = new CostMethodClassVisitor(classWriter, option, propsItem)
                                     classReader.accept(cv, EXPAND_FRAMES)
                                     byte[] code = classWriter.toByteArray()
                                     FileOutputStream fos = new FileOutputStream(

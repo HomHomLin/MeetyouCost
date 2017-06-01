@@ -11,6 +11,9 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.AdviceAdapter;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+
 /**
  * 方法耗时 visitor
  * Author: lwh
@@ -19,8 +22,23 @@ import org.objectweb.asm.commons.AdviceAdapter;
 
 public class CostMethodClassVisitor extends ClassVisitor {
 
-    public CostMethodClassVisitor(ClassVisitor classVisitor) {
+    public final static String OPTION_DEFAULT = "default";
+    public final static String OPTION_CUSTOM = "custom";
+    public final static String OPTION_ALL = "all";
+
+    public final static String OPTION_NAME = "assassin.option";
+
+    private String mOption;
+    private ArrayList<AssassinDO> mProps;
+
+    public CostMethodClassVisitor(ClassVisitor classVisitor, String option, ArrayList<AssassinDO> props){
         super(Opcodes.ASM5,classVisitor);
+        init(option, props);
+    }
+
+    private void init(String option, ArrayList<AssassinDO> props){
+        mProps = props;
+        mOption = option;
     }
 
     @Override
@@ -28,19 +46,9 @@ public class CostMethodClassVisitor extends ClassVisitor {
                                      String[] exceptions) {
         MethodVisitor methodVisitor = cv.visitMethod(access, name, desc, signature, exceptions);
         methodVisitor = new AdviceAdapter(Opcodes.ASM5, methodVisitor, access, name, desc) {
-//
-//            boolean inject = true;
-//            private boolean isInject(){
-//               /* if(name.equals("setStartTime") || name.equals("setEndTime") || name.equals("getCostTime")){
-//                   return false;
-//                }
-//                return true;*/
-//               return inject;
-//            }
-
-            public void print(String e){
-                                    mv.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
-                    mv.visitLdcInsn(e);
+            public void print(String msg){
+                    mv.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
+                    mv.visitLdcInsn(msg);
                     mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println",
                             "(Ljava/lang/String;)V", false);
             }
@@ -64,8 +72,27 @@ public class CostMethodClassVisitor extends ClassVisitor {
 //                return super.visitAnnotation(desc, visible);
 //            }
 
+            protected AssassinDO findAssassin(String name){
+                AssassinDO assassinDO = null;
+                for(AssassinDO item : mProps){
+                    if(item.equals(name)){
+                        assassinDO = item;
+                        break;
+                    }
+                }
+                return assassinDO;
+            }
+
             @Override
             protected void onMethodEnter() {
+                AssassinDO assassinDO = null;
+                if(!mOption.equals(OPTION_ALL)) {
+                    assassinDO = findAssassin(name);
+                    if (assassinDO == null) {
+                        //没有该name的配置
+                        return;
+                    }
+                }
                 //super.onMethodEnter();
 //                if(isInject()){
                 print("onMethodEnter:"+name + ",desc=" + methodDesc + ",return="+Type.getReturnType(desc).toString());
@@ -180,49 +207,59 @@ public class CostMethodClassVisitor extends ClassVisitor {
 //                        }
 //                    }
 
+                //载入this到栈顶
                 loadThis();
                 mv.visitLdcInsn(name);
                 loadArgArray();
                     Type[] types = Type.getArgumentTypes(methodDesc);
                     int start_index = types.length + 1;
+                mv.visitLdcInsn(Type.getReturnType(methodDesc).toString());
 //                mv.visitVarInsn(ALOAD, start_index);
                     mv.visitMethodInsn(INVOKESTATIC, "com/meiyou/meetyoucost/TimeCache", "onMethodEnter",
-                            "(Ljava/lang/Object;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;", false);
+                            "(Ljava/lang/Object;Ljava/lang/String;[Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;", false);
                 mv.visitVarInsn(ASTORE, start_index);
 
                 //如果拦截器为真
-                mv.visitMethodInsn(INVOKESTATIC, "com/meiyou/meetyoucost/TimeCache", "onIntecept", "()Z", false);
-                Label l0 = new Label();
-                mv.visitJumpInsn(IFEQ, l0);
-                onMethodExit(-1);
-                String return_v = Type.getReturnType(desc).toString();
-                if(!return_v.equals("V")){
-                    //有返回值
-                    mv.visitVarInsn(ALOAD, start_index);
-                    returnValue();
-                }else{
-                    mv.visitInsn(RETURN);
-                }
+                if(assassinDO != null && assassinDO.value.equals("override")) {
+                    print("override:" + name);
+//                String methodKey = "method." + name;
+//                mv.visitMethodInsn(INVOKESTATIC, "com/meiyou/meetyoucost/TimeCache", "onIntecept", "()Z", false);
+//                Label l0 = new Label();
+//                mv.visitJumpInsn(IFEQ, l0);
+                    onMethodExit(-1);
+                    String return_v = Type.getReturnType(desc).toString();
+                    if (!return_v.equals("V")) {
+                        //有返回值
+                        mv.visitVarInsn(ALOAD, start_index);
+                        returnValue();
+                    } else {
+                        mv.visitInsn(RETURN);
+                    }
 
-                mv.visitLabel(l0);
-                mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+//                    mv.visitLabel(l0);
+                    mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+                }
 
 
             }
 
             @Override
             protected void onMethodExit(int i) {
+                AssassinDO assassinDO = null;
+                if(!mOption.equals(OPTION_ALL)) {
+                    assassinDO = findAssassin(name);
+                    if (assassinDO == null) {
+                        //没有该name的配置
+                        return;
+                    }
+                }
                 print("onMethodExit:"+name + ",desc=" + methodDesc + ",return="+Type.getReturnType(desc).toString());
-//                Type[] types = Type.getArgumentTypes(methodDesc);
-//                returnValue();
-//                returnValue();
-//                int start_index = types.length + 1;
                 loadThis();
                 mv.visitLdcInsn(name);
                 loadArgArray();
-//                returnValue();
+                mv.visitLdcInsn(Type.getReturnType(methodDesc).toString());
                 mv.visitMethodInsn(INVOKESTATIC, "com/meiyou/meetyoucost/TimeCache", "onMethodEnd",
-                        "(Ljava/lang/Object;Ljava/lang/String;[Ljava/lang/Object;)V", false);
+                        "(Ljava/lang/Object;Ljava/lang/String;[Ljava/lang/Object;Ljava/lang/String;)V", false);
 //                if(isInject()){
 //                    mv.visitLdcInsn(name);
 //                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/System", "nanoTime", "()J", false);
